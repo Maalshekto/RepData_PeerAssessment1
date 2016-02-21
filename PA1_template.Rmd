@@ -1,25 +1,126 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+output: html_document
+keep_md: true
 ---
 
 
 ## Loading and preprocessing the data
 
+First of all, needed library are loaded.<br/>
+Then, activies data are retrieved from activity.csv file.<br/>
+And finally, the date on string format are converted in Date class.<br/>
+
+```{r library_loading, echo=TRUE, warning=FALSE, message=FALSE}
+library(dplyr)
+library(lattice)
+
+activities <- read.csv("activity.csv", stringsAsFactors = FALSE)
+activities$date <- as.Date(activities$date)
+```
+
 
 
 ## What is mean total number of steps taken per day?
 
+The data previously obtained are grouped by date,<br/>
+then, for each day, the sum of step of each interval is calculated.<br/>
+The histogram of the total number of steps can now be drawed.
+
+```{r hist_total_number_steps, echo=TRUE, warning=FALSE, message=FALSE, fig.align='center'}
+totalNumberStepsPerDay <- activities %>% group_by(date)  %>% summarise(daily = sum(steps, na.rm = TRUE)) 
+hist(totalNumberStepsPerDay$daily, breaks=20, main = "Histogram of total number of steps taken per day", xlab = "Total number of steps")
+```
+
+With this list of total number of steps for each day, the mean and median can now be easily retrieved.
+```{r mean_total_number_steps, echo=TRUE, warning=FALSE, message=FALSE}
+meanStep <- as.integer(mean(totalNumberStepsPerDay$daily, na.rm = TRUE))
+medianStep <- as.integer(median(totalNumberStepsPerDay$daily, na.rm = TRUE))
+```
+The integer value of mean of total step is `r meanStep`.<br/>
+The median of total step is `r medianStep`.
 
 
 ## What is the average daily activity pattern?
 
+Again, The data previously obtained are used, but now grouped by interval,<br/>
+then, for each interval, the mean of step calculated across all days values.<br/>
+The time series plot  can now be drawed.
 
+```{r plot_average_daily_activity, echo=TRUE, warning=FALSE, message=FALSE, fig.align='center'}
+averageStepsPerInterval <- activities %>% group_by(interval)  %>% summarise(averageInterval = mean(steps, na.rm = TRUE)) 
+plot(as.numeric(averageStepsPerInterval$interval), averageStepsPerInterval$averageInterval, type="l", main = "Time series plot", xlab = "5-minute interval", ylab = "Average number of steps")
+```
+```{r max_average_daily_activity, echo=TRUE, warning=FALSE, message=FALSE}
+maxInterval <- averageStepsPerInterval[which.max(averageStepsPerInterval$averageInterval), "interval"][[1]]
+``` 
+The 5-minute interval, on average across all the days in the dataset, containing the maximum number of step is `r maxInterval`.<br/>
 
 ## Imputing missing values
 
+First of all, calculate the sum of the NA values.
+```{r NA_number, echo=TRUE, warning=FALSE, message=FALSE}
+naNumber <- sum(is.na(activities))
+```
+The total number of missing values in the dataset is `r naNumber`.<br/>
+As the average daily activity has been previously calculated, <br/>each NA value will be replaced by the mean of the corresponding interval.
+
+```{r NA_replace, echo=TRUE, warning=FALSE, message=FALSE}
+emptyIndexes <- which(is.na(activities$steps))
+completeActivities <- activities
+completeActivities[emptyIndexes,]$steps <- merge(completeActivities[emptyIndexes,],averageStepsPerInterval)$averageInterval
+```
+
+Now, we have completed the dataset, we will build again the histogram :
+
+```{r complete_hist_total_number_steps, echo=TRUE, warning=FALSE, message=FALSE, fig.align='center'}
+totalNumberStepsPerDay <- completeActivities %>% group_by(date)  %>% summarise(daily = sum(steps, na.rm = TRUE)) 
+hist(totalNumberStepsPerDay$daily, breaks=20, main = "Histogram of total number of steps taken per day", xlab = "Total number of steps")
+```
+
+With this list of total number of steps for each day, the mean and median can be retrieved again.
+```{r complete_mean_total_number_steps, echo=TRUE, warning=FALSE, message=FALSE}
+meanStep <- as.integer(mean(totalNumberStepsPerDay$daily, na.rm = TRUE))
+medianStep <- as.integer(median(totalNumberStepsPerDay$daily, na.rm = TRUE))
+```
+The integer value of mean of total step is `r meanStep`.<br/>
+The median of total step is `r medianStep`.
+
+So, with complete data, the mean and median of the total daily number of steps <br/>
+ is higher than with original data with NA value.
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Firstly, we create a function that give a new factor  with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day. <br/>
+Secondly, we apply it at complete data and creating a new column for it.
+
+```{r weekend_weekday, echo=TRUE, warning=FALSE, message=FALSE}
+getWeekPeriod <- function(d) {
+    if(weekdays(d) %in% c("Saturday", "Sunday")) {
+        return("weekend")
+    }
+    else {
+        return("weekday")
+    }
+}
+
+completeActivities <- cbind(completeActivities, weekPeriod = mapply(getWeekPeriod, completeActivities$date))
+```
+
+Finally, by grouping it by interval and weekPeriod, we split data to draw the plot for weekday and weekend. 
+
+```{r final_plot_average_daily_activity, echo=TRUE, warning=FALSE, message=FALSE, fig.align='center'}
+completeActivities <- completeActivities %>% 
+                 group_by(interval, weekPeriod)  %>% 
+                 summarise(averageInterval = mean(steps, na.rm = TRUE))
+
+
+xyplot(averageInterval~interval | weekPeriod,
+                    type="l", layout=c(1, 2), 
+                    data = completeActivities, as.table = TRUE,
+                    xlab = "Interval", ylab = "Number of steps", 
+                    main = "Time serie plot with weekend/weekday split")
+```
+
+So we can observe, that in weekend, the morning peak around 8h35 AM is not as important as it is during week days.
