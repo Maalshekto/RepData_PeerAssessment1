@@ -1,9 +1,42 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
+title: 'Reproducible Research: Peer Assessment 1'
 output: html_document
-keep_md: true
+keep_md: yes
 ---
 
+## Software Environment
+
+```
+## R version 3.2.3 (2015-12-10)
+## Platform: x86_64-w64-mingw32/x64 (64-bit)
+## Running under: Windows >= 8 x64 (build 9200)
+## 
+## locale:
+## [1] LC_COLLATE=English_United States.1252 
+## [2] LC_CTYPE=English_United States.1252   
+## [3] LC_MONETARY=English_United States.1252
+## [4] LC_NUMERIC=C                          
+## [5] LC_TIME=English_United States.1252    
+## 
+## attached base packages:
+## [1] stats     graphics  grDevices utils     datasets  methods   base     
+## 
+## other attached packages:
+## [1] dplyr_0.4.3  knitr_1.12.3
+## 
+## loaded via a namespace (and not attached):
+##  [1] Rcpp_0.12.3       magrittr_1.5      munsell_0.4.3    
+##  [4] colorspace_1.2-6  lattice_0.20-33   R6_2.1.2         
+##  [7] stringr_1.0.0     httr_1.1.0        plyr_1.8.3       
+## [10] tools_3.2.3       parallel_3.2.3    grid_3.2.3       
+## [13] gtable_0.1.2      DBI_0.3.1         htmltools_0.3    
+## [16] lazyeval_0.1.10   assertthat_0.1    yaml_2.1.13      
+## [19] digest_0.6.9      crayon_1.3.1      ggplot2_2.0.0    
+## [22] formatR_1.2.1     bitops_1.0-6      rsconnect_0.4.1.4
+## [25] RCurl_1.95-4.7    testthat_0.11.0   memoise_1.0.0    
+## [28] evaluate_0.8      rmarkdown_0.9.2   stringi_1.0-1    
+## [31] scales_0.3.0      swirl_2.2.21
+```
 
 ## Loading and preprocessing the data
 
@@ -30,8 +63,12 @@ The histogram of the total number of steps can now be drawed.
 
 
 ```r
-totalNumberStepsPerDay <- activities %>% group_by(date)  %>% summarise(daily = sum(steps, na.rm = TRUE)) 
-hist(totalNumberStepsPerDay$daily, breaks=20, main = "Histogram of total number of steps taken per day", xlab = "Total number of steps")
+totalNumberStepsPerDay <- activities %>% 
+                          group_by(date)  %>% 
+                          summarise(daily = sum(steps, na.rm = TRUE)) 
+hist(totalNumberStepsPerDay$daily, breaks=20, 
+     main = "Histogram of total number of steps taken per day", 
+     xlab = "Total number of steps")
 ```
 
 <img src="figure/hist_total_number_steps-1.png" title="plot of chunk hist_total_number_steps" alt="plot of chunk hist_total_number_steps" style="display: block; margin: auto;" />
@@ -54,14 +91,20 @@ The time series plot  can now be drawed.
 
 
 ```r
-averageStepsPerInterval <- activities %>% group_by(interval)  %>% summarise(averageInterval = mean(steps, na.rm = TRUE)) 
-plot(as.numeric(averageStepsPerInterval$interval), averageStepsPerInterval$averageInterval, type="l", main = "Time series plot", xlab = "5-minute interval", ylab = "Average number of steps")
+averageStepsPerInterval <- activities %>% 
+                           group_by(interval) %>% 
+                           summarise(averageInterval = mean(steps, na.rm = TRUE)) 
+plot(as.numeric(averageStepsPerInterval$interval), 
+                averageStepsPerInterval$averageInterval, 
+                type="l", main = "Time series plot", 
+                xlab = "5-minutes interval", ylab = "Average number of steps")
 ```
 
 <img src="figure/plot_average_daily_activity-1.png" title="plot of chunk plot_average_daily_activity" alt="plot of chunk plot_average_daily_activity" style="display: block; margin: auto;" />
 
 ```r
-maxInterval <- averageStepsPerInterval[which.max(averageStepsPerInterval$averageInterval), "interval"][[1]]
+maxInterval <- averageStepsPerInterval[which.max(averageStepsPerInterval$averageInterval), 
+                                       "interval"][[1]]
 ```
 The 5-minute interval, on average across all the days in the dataset, containing the maximum number of step is 835.<br/>
 
@@ -79,15 +122,20 @@ As the average daily activity has been previously calculated, <br/>each NA value
 ```r
 emptyIndexes <- which(is.na(activities$steps))
 completeActivities <- activities
-completeActivities[emptyIndexes,]$steps <- merge(completeActivities[emptyIndexes,],averageStepsPerInterval)$averageInterval
+completeActivities[emptyIndexes,]$steps <-
+  merge(completeActivities[emptyIndexes,],averageStepsPerInterval)$averageInterval
 ```
 
 Now, we have completed the dataset, we will build again the histogram :
 
 
 ```r
-totalNumberStepsPerDay <- completeActivities %>% group_by(date)  %>% summarise(daily = sum(steps, na.rm = TRUE)) 
-hist(totalNumberStepsPerDay$daily, breaks=20, main = "Histogram of total number of steps taken per day", xlab = "Total number of steps")
+totalNumberStepsPerDay <- completeActivities %>% 
+                          group_by(date)  %>% 
+                          summarise(daily = sum(steps, na.rm = TRUE)) 
+hist(totalNumberStepsPerDay$daily, breaks=20,
+     main = "Histogram of total number of steps taken per day", 
+     xlab = "Total number of steps")
 ```
 
 <img src="figure/complete_hist_total_number_steps-1.png" title="plot of chunk complete_hist_total_number_steps" alt="plot of chunk complete_hist_total_number_steps" style="display: block; margin: auto;" />
@@ -121,7 +169,8 @@ getWeekPeriod <- function(d) {
     }
 }
 
-completeActivities <- cbind(completeActivities, weekPeriod = mapply(getWeekPeriod, completeActivities$date))
+completeActivities <- cbind(completeActivities, 
+                            weekPeriod = mapply(getWeekPeriod, completeActivities$date))
 ```
 
 Finally, by grouping it by interval and weekPeriod, we split data to draw the plot for weekday and weekend. 
@@ -136,7 +185,7 @@ completeActivities <- completeActivities %>%
 xyplot(averageInterval~interval | weekPeriod,
                     type="l", layout=c(1, 2), 
                     data = completeActivities, as.table = TRUE,
-                    xlab = "Interval", ylab = "Number of steps", 
+                    xlab = "5-minutes Interval", ylab = "Number of steps", 
                     main = "Time serie plot with weekend/weekday split")
 ```
 
